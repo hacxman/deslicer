@@ -4,7 +4,7 @@ import signal
 import daemon
 import lockfile
 
-from deslicer import (
+from deslicerd import (
     initial_program_setup,
     do_main_program,
     program_cleanup,
