@@ -27,8 +27,9 @@ def talkto(data, sock):
     while cnt != n:
       sz = 4096 if cnt < n - 4096 else n - cnt
       r = os.read(fd, sz)
-      cnt += sz
+      cnt += len(r)
       res += r
+      #print r, len(r)
     return json.loads(res)
 
 def show_help():
@@ -115,7 +116,7 @@ def run(sock, args=sys.argv):
 
 
 if __name__=="__main__":
-  HOST, PORT = "::1", 9999
+  HOST, PORT = "qwop.doma", 9999
 
   # Create a socket (SOCK_STREAM means a TCP socket)
   sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
