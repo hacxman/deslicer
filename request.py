@@ -9,14 +9,15 @@ import threading
 import subprocess
 import sqlite3
 
+
 def importit(j, con):
   if j.has_key('data'):
     fname = os.path.join('stl',str(uuid.uuid1())+'.stl')
     with open(fname, 'w+') as fin:
       fin.write(decodestring(j['data']))
     with con:
-      con.execute('insert into stl(localname, origname) values (?, ?)',
-        (fname, decodestring(j['name'])))
+      con.execute(u'insert into stl(localname, origname) values (?, ?)',
+        (fname, j['name']))
       con.commit()
   return {'r': 'ok',
       'm': 'recieved {} B'.format(len(j['data'])),
@@ -38,8 +39,8 @@ def importconfig(j, con):
     with open(fname, 'w+') as fin:
       fin.write(decodestring(j['data']))
     with con:
-      con.execute('insert into configs(localname, origname) values (?, ?)',
-        (fname, decodestring(j['name'])))
+      con.execute(u'insert into configs(localname, origname) values (?, ?)',
+        (fname, j['name']))
   return {'r': 'ok',
       'm': 'recieved {} B'.format(len(j['data'])),
       'id': fname}
@@ -49,11 +50,11 @@ def listconfigs(j, con):
   sizes = map(lambda x: os.stat(os.path.join('cfg', x)).st_size, files)
 
   cur = con.cursor()
-  a = cur.execute('select * from configs')
+  a = cur.execute(u'select * from configs')
   nms = dict(map(lambda x: (x['localname'], x['origname']), a))
 
-  print nms
-  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': encodestring(nms['cfg/'+x])}, zip(files, sizes))}
+  print 'in db:', nms
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': nms['cfg/'+x]}, zip(files, sizes))}
 
 def listdone(j, con):
   files = os.listdir('gcode')

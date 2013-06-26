@@ -1,0 +1,10 @@
+# Default command-line options when starting imagefactoryd
+OPTIONS=""
+
+#LOGFILE="/var/log/delicer.log"
+
+#LOCKFILE="/var/lock/subsys/deslicer"
+
+#PIDFILE="/var/run/deslicer.pid"
+
+#CONFFILE="/etc/deslicer/deslicer.conf"
