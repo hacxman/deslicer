@@ -6,9 +6,7 @@ import SocketServer
 import request
 import sqlite3
 
-import socket
 import threading
-import SocketServer
 
 #class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 #
@@ -21,7 +19,7 @@ import SocketServer
 class MyTCPHandler(SocketServer.StreamRequestHandler):
 
     def handle(self):
-        print "{} wrote:".format(self.client_address[0])
+        print("{} wrote:".format(self.client_address[0]))
         con = sqlite3.connect('db.sqlite')
         con.row_factory = sqlite3.Row
 
@@ -31,9 +29,9 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
                 break
             cnt = cnt.strip()
 
-            print cnt
+            print(cnt)
             data = self.rfile.read(int(cnt))
-            print data
+            print(data)
 
             response = request.handle(data, con)
 
@@ -44,9 +42,8 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     allow_reuse_address = True
     address_family = socket.AF_INET6
 
-if __name__ == "__main__":
-    # Port 0 means to select an arbitrary unused port
-    HOST, PORT = "::1", 9999
+def do_main_program():
+    HOST, PORT = "", 9999
 
     server = ThreadedTCPServer((HOST, PORT), MyTCPHandler)
 #    print server.server_address
@@ -58,7 +55,7 @@ if __name__ == "__main__":
     # Exit the server thread when the main thread terminates
     server_thread.daemon = True
     server_thread.start()
-    print "Server loop running in thread:", server_thread.name
+    print( "Server loop running in thread:", server_thread.name)
 
     server.serve_forever()
 #    server.shutdown()
@@ -66,9 +63,9 @@ if __name__ == "__main__":
 
 
 
-#def initial_program_setup():
-#  print 'SETUUUUUUUUUP!!!!!'
-#
+def initial_program_setup():
+  print ('SETUUUUUUUUUP!!!!!')
+
 #class TCPServer(SocketServer.TCPServer):
 #    allow_reuse_address = True
 #    address_family = socket.AF_INET6
@@ -84,10 +81,10 @@ if __name__ == "__main__":
 #    server.serve_forever()
 
 def program_cleanup():
-  print 'CLEANUUUUUUUUP!!!'
+  print ('CLEANUUUUUUUUP!!!')
 
 def reload_program_config():
-  print 'CONFIIIIIIIIIIG!!!!111'
+  print ('CONFIIIIIIIIIIG!!!!111')
 
 if __name__=='__main__':
   if '-d' in sys.argv:
@@ -98,7 +95,7 @@ if __name__=='__main__':
       reload_program_config()
       do_main_program()
     except Exception as e:
-      print e
+      print (e)
       program_cleanup()
       raise e
 
