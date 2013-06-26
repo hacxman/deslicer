@@ -17,6 +17,7 @@ def importit(j, con):
     with con:
       con.execute('insert into stl(localname, origname) values (?, ?)',
         (fname, decodestring(j['name'])))
+      con.commit()
   return {'r': 'ok',
       'm': 'recieved {} B'.format(len(j['data'])),
       'id': fname}
