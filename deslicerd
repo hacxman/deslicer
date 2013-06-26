@@ -6,6 +6,18 @@ import SocketServer
 import request
 import sqlite3
 
+import socket
+import threading
+import SocketServer
+
+#class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+#
+#    def handle(self):
+#        data = self.request.recv(1024)
+#        cur_thread = threading.current_thread()
+#        response = "{}: {}".format(cur_thread.name, data)
+#        self.request.sendall(response)
+
 class MyTCPHandler(SocketServer.StreamRequestHandler):
 
     def handle(self):
@@ -27,22 +39,49 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
 
             self.wfile.write(str(len(response))+'\n'+response)
 
-def initial_program_setup():
-  print 'SETUUUUUUUUUP!!!!!'
 
-class TCPServer(SocketServer.TCPServer):
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     allow_reuse_address = True
     address_family = socket.AF_INET6
 
-def do_main_program():
+if __name__ == "__main__":
+    # Port 0 means to select an arbitrary unused port
     HOST, PORT = "::1", 9999
 
-    # Create the server, binding to localhost on port 9999
-    server = TCPServer((HOST, PORT), MyTCPHandler)
+    server = ThreadedTCPServer((HOST, PORT), MyTCPHandler)
+#    print server.server_address
+    ip, port, _, _ = server.server_address
 
-    # Activate the server; this will keep running until you
-    # interrupt the program with Ctrl-C
+    # Start a thread with the server -- that thread will then start one
+    # more thread for each request
+    server_thread = threading.Thread(target=server.serve_forever)
+    # Exit the server thread when the main thread terminates
+    server_thread.daemon = True
+    server_thread.start()
+    print "Server loop running in thread:", server_thread.name
+
     server.serve_forever()
+#    server.shutdown()
+
+
+
+
+#def initial_program_setup():
+#  print 'SETUUUUUUUUUP!!!!!'
+#
+#class TCPServer(SocketServer.TCPServer):
+#    allow_reuse_address = True
+#    address_family = socket.AF_INET6
+#
+#def do_main_program():
+#    HOST, PORT = "::1", 9999
+#
+#    # Create the server, binding to localhost on port 9999
+#    server = TCPServer((HOST, PORT), MyTCPHandler)
+#
+#    # Activate the server; this will keep running until you
+#    # interrupt the program with Ctrl-C
+#    server.serve_forever()
 
 def program_cleanup():
   print 'CLEANUUUUUUUUP!!!'
