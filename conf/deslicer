@@ -1,0 +1,12 @@
+weekly
+rotate 52
+compress
+missingok
+notifempty
+
+/var/log/deslicer.log {
+  sharedscripts
+  postrotate
+      /sbin/systemctl restart deslicer
+  endscript
+}
