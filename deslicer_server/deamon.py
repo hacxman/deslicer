@@ -4,7 +4,7 @@ import signal
 import daemon
 import lockfile
 
-from deslicerd import (
+from main import (
     initial_program_setup,
     do_main_program,
     program_cleanup,
@@ -23,12 +23,12 @@ context.signal_map = {
     signal.SIGUSR1: reload_program_config,
     }
 
-slicer_gid = grp.getgrnam('hacxman').gr_gid
+slicer_gid = grp.getgrnam('deslicer').gr_gid
 context.gid = slicer_gid
 
-important_file = open('spam.data', 'w')
-interesting_file = open('eggs.data', 'w')
-context.files_preserve = [important_file, interesting_file]
+#important_file = open('spam.data', 'w')
+#interesting_file = open('eggs.data', 'w')
+#context.files_preserve = [important_file, interesting_file]
 
 initial_program_setup()
 

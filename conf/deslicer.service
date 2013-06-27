@@ -3,9 +3,11 @@ Description=Deslicer daemon
 After=syslog.target network.target auditd.service
 
 [Service]
-EnvironmentFile=/etc/sysconfig/deslicerd
+#Type=forking
+EnvironmentFile=/etc/sysconfig/deslicer
 ExecStart=/usr/bin/deslicerd -d $OPTIONS
 ExecReload=/bin/kill -HUP $MAINPID
+User=deslicer
 KillMode=process
 
 [Install]
