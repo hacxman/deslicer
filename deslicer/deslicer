@@ -17,7 +17,19 @@ def readupto(fd, c='\n'):
 
 def talkto(data, sock):
     data = json.dumps(data)
-    sock.sendall(str(len(data))+"\n"+data)
+    datalen = len(data)
+    sock.sendall(str(datalen)+"\n")
+    if datalen > 30000:
+      cnt = 0
+      while cnt != datalen:
+        sz = 4096 if cnt < datalen - 4096 else datalen - cnt
+        sock.sendall(data[cnt:cnt+sz])
+        sys.stdout.write('U {}/{}B\r'.format(cnt, datalen))
+        cnt += sz
+      sys.stdout.write('\n')
+    else:
+      sock.sendall(data)
+
 
     # Receive data from the server and shut down
     fd = sock.fileno()
@@ -29,7 +41,12 @@ def talkto(data, sock):
       r = os.read(fd, sz)
       cnt += len(r)
       res += r
-      #print r, len(r)
+      if n > 30000:
+        sys.stdout.write('D {}/{}B\r'.format(cnt, n))
+
+    if n > 30000:
+      sys.stdout.write('\n')
+
     return json.loads(res)
 
 def show_help():
@@ -90,8 +107,10 @@ def run(sock, args=sys.argv):
   elif 'list' in args:
     print 'STL files already on server'
     run(sock, ['listi'])
+    print
     print 'Slic3r config files already on server'
     run(sock, ['listc'])
+    print
     print 'Output GCode'
     run(sock, ['listd'])
     return
