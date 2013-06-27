@@ -31,7 +31,7 @@ def listimported(j, con):
   a = cur.execute('select * from stl')
   nms = dict(map(lambda x: (x['localname'], x['origname']), a))
 
-  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': encodestring(nms['stl/'+x])}, zip(files, sizes))}
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': nms['stl/'+x]}, zip(files, sizes))}
 
 def importconfig(j, con):
   if j.has_key('data'):
@@ -110,6 +110,7 @@ def handle(data, con):
       hndlr = handlers[d['cmd']]
     else:
       hndlr = noop
+    print 'cmd:', d['cmd']
 
   r = hndlr(d, con)
 
