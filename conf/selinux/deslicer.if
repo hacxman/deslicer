@@ -1,0 +1,85 @@
+<!-- <summary>JSON RPC server for running Slic3r as a remote service.</summary>
+-->
+
+<!--######################################
+-->
+<!-- <summary>
+-->
+<!--      Execute Deslicer in deslicer domain.
+-->
+<!-- </summary>
+-->
+<!-- <param name="domain">
+-->
+<!--      <summary>
+-->
+<!--      Domain allowed access.
+-->
+<!--      </summary>
+-->
+<!-- </param>
+-->
+#
+interface(<code>deslicer_domtrans',</code>
+gen_require(<code>
+type deslicer_t, deslicer_exec_t;
+')
+
+corecmd_search_bin($1)
+domain_auto_trans($1, deslicer_exec_t, deslicer_t)
+
+allow $1 deslicer_t:fd use;
+allow deslicer_t $1:fd use;
+allow deslicer_t $1:fifo_file rw_file_perms;
+allow deslicer_t $1:process sigchld;
+')
+
+<!--######################################
+-->
+<!-- <summary>
+-->
+<!--      Create objects in the /var/lib/deslicer directory
+-->
+<!-- </summary>
+-->
+<!-- <param name="domain">
+-->
+<!--      <summary>
+-->
+<!--      Domain allowed access.
+-->
+<!--      </summary>
+-->
+<!-- </param>
+-->
+<!-- <param name="file_type">
+-->
+<!--      <summary>
+-->
+<!--      The type of the object to be created
+-->
+<!--      </summary>
+-->
+<!-- </param>
+-->
+<!-- <param name="object_class">
+-->
+<!--      <summary>
+-->
+<!--      The object class.
+-->
+<!--      </summary>
+-->
+<!-- </param>
+-->
+#
+interface(<code>files_var_lib_deslicer_filetrans',</code>
+gen_require(<code>
+type var_t, var_lib_t, deslicer_var_lib_t;
+')
+
+allow $1 var_t:dir search_dir_perms;
+allow $1 var_lib_t:dir search_dir_perms;
+allow $1 deslicer_var_lib_t:dir rw_dir_perms;
+type_transition $1 deslicer_var_lib_t:$3 $2;
+')

@@ -1,0 +1,2 @@
+/usr/bin/deslicerd              --      gen_context(system_u:object_r:deslicer_exec_t,s0)
+/var/lib/deslicer(/.*)?                 gen_context(system_u:object_r:deslicer_var_lib_t,s0)

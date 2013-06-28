@@ -1,0 +1,32 @@
+policy_module(deslicer, 0.0.1)
+
+<!--######################################
+-->
+#
+#
+
+type deslicer_t;
+domain_type(deslicer_t)
+
+type mock_exec_t;
+domain_entry_file(deslicer_t,deslicer_exec_t)
+
+type deslicer_var_lib_t;
+files_type(deslicer_var_lib_t)
+
+<!--######################################
+-->
+#
+#
+
+ifdef(<code>targeted_policy',</code>
+
+#allow mock_t self:process { execheap execmem };
+#unconfined_domain_noaudit(mock_t)
+role system_r types deslicer_t;
+
+#allow mock_t mock_var_lib_t:file execmod;
+
+deslicer_domtrans(unconfined_t)
+
+')
