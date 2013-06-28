@@ -86,12 +86,12 @@ def slicethread(fname, oname, cfg):
     fname, "-o", oname+'.gcode'])
 
 def sliceit(j, con):
-  idx = j['id']
+  idx = os.path.basename(j['id'])
   oname = os.path.join(os.path.abspath('gcode'), idx)
   fname = os.path.join(os.path.abspath('stl'), idx)
   cfg = None
   if j.has_key('cfg'):
-    cfg = 'cfg/'+j['cfg']
+    cfg = 'cfg/'+os.path.basename(j['cfg'])
   th = threading.Thread(target=slicethread, args=(fname, oname, cfg))
   th.start()
   return {'m': 'slicing started', 'r': 'ok'}
