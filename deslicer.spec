@@ -17,6 +17,7 @@ jebem ti mater
 Summary: JSON RPC server for running Slic3r as a remote service
 Requires: python
 Requires: python-daemon
+BuildRequires: selinux-policy-devel
 Requires(post): chkconfig
 Requires(preun): chkconfig
 # This is for /sbin/service
@@ -24,9 +25,18 @@ Requires(preun): initscripts
 Requires(post): systemd-units
 Requires(preun): systemd-units
 Requires(postun): systemd-units
+#Requires(post): policycoreutils
 
 %description server
-Client for deslicer
+Deslicer server
+
+%package server-selinux
+Summary: SELinux files for Deslicer server
+Requires: %name = %version-%release
+Requires(...): policycoreutils-python
+
+%description server-selinux
+SELinux policy for Deslicer server
 
 %prep
 %setup -q
@@ -39,7 +49,6 @@ python setup-server.py build
 #cp -r conf/* ${buildroot}/conf/
 
 %install
-
 python setup.py install -O1 --root=%{buildroot} --skip-build
 python setup-server.py install -O1 --root=%{buildroot} --skip-build
 
@@ -53,14 +62,40 @@ python setup-server.py install -O1 --root=%{buildroot} --skip-build
 %{__install} -m0600 conf/deslicer.service %{buildroot}/%{_unitdir}/deslicer.service
 %{__install} -m0600 conf/sysconfig-deslicerd %{buildroot}/%{_sysconfdir}/sysconfig/deslicer
 
+%{__install} -d %{buildroot}/usr/share/selinux/packages/deslicer
+%{__install} -m0600 conf/selinux/deslicer.te %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.te
+%{__install} -m0600 conf/selinux/deslicer.fc %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.fc
+%{__install} -m0600 conf/selinux/deslicer.if %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.if
+pushd %{buildroot}/usr/share/selinux/packages/deslicer/
+make -f /usr/share/selinux/devel/Makefile
+rm %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.te
+rm %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.fc
+rm %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.if
+rm -rf %{buildroot}/usr/share/selinux/packages/deslicer/tmp
+popd
+
 %post server
 useradd deslicer
 systemctl enable deslicer
+
+%post server-selinux
+semodule -i %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.pp
+
+semanage fcontext -a -t deslicer_var_lib_t '%{_localstatedir}/lib/deslicer(/.*)?' 2>/dev/null || :
+semanage fcontext -a -t deslicer_exec_t '%{_bindir}/deslicerd' 2>/dev/null || :
+restorecon -R '%{_localstatedir}/lib/deslicer/' 2>/dev/null || :
+restorecon '%{_bindir}/deslicerd' 2>/dev/null || :
 
 %preun server
 if [ $1 = 0 ] ; then
     systemctl stop deslicer >/dev/null 2>&1
     systemctl disable deslicer
+fi
+
+%postun server-selinux
+if [ $1 -eq 0 ] ; then  # final removal
+    semanage fcontext -d -t deslicer_var_lib_t '%{_localstatedir}/lib/deslicer(/.*)?' 2>/dev/null || :
+    semanage fcontext -d -t deslicer_exec_t '%{_bindir}/deslicerd' 2>/dev/null || :
 fi
 
 %files
@@ -79,6 +114,10 @@ fi
 %{python_sitelib}/deslicer_server/*.py
 %{_bindir}/deslicerd
 %{python_sitelib}/deslicer_server-*.egg-info
+
+%files server-selinux
+%dir /usr/share/selinux/packages/deslicer
+/usr/share/selinux/packages/deslicer/deslicer.pp
 
 %changelog
 * Wed Jun 26 2013 Maros Zatko <zavinac@www.wwwbodkask.sk> - 0.0.1-1
