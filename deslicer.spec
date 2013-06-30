@@ -15,6 +15,7 @@ jebem ti mater
 
 %package server
 Summary: JSON RPC server for running Slic3r as a remote service
+Requires: slic3r
 Requires: python
 Requires: python-daemon
 BuildRequires: selinux-policy-devel
@@ -79,12 +80,14 @@ useradd deslicer
 systemctl enable deslicer
 
 %post server-selinux
-semodule -i %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.pp
+semodule -i /usr/share/selinux/packages/deslicer/deslicer.pp
 
 semanage fcontext -a -t deslicer_var_lib_t '%{_localstatedir}/lib/deslicer(/.*)?' 2>/dev/null || :
 semanage fcontext -a -t deslicer_exec_t '%{_bindir}/deslicerd' 2>/dev/null || :
+semanage fcontext -a -t slic3r_exec_t '%{_bindir}/slic3r' 2>/dev/null || :
 restorecon -R '%{_localstatedir}/lib/deslicer/' 2>/dev/null || :
 restorecon '%{_bindir}/deslicerd' 2>/dev/null || :
+restorecon '%{_bindir}/slic3r' 2>/dev/null || :
 
 %preun server
 if [ $1 = 0 ] ; then

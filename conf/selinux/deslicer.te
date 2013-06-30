@@ -1,32 +1,67 @@
 policy_module(deslicer, 0.0.1)
 
-######################################
-
-#
-#
+require {
+  type deslicer_var_lib_t;
+  type proc_t;
+  type jboss_management_port_t;
+  type shell_exec_t;
+  type home_root_t;
+  type user_home_dir_t;
+  type urandom_device_t;
+  type deslicer_t;
+  type node_t;
+  type ldconfig_exec_t;
+  type deslicer_t;
+  type passwd_file_t;
+  type slic3r_exec_t;
+  type slic3r_t;
+  type bin_t;
+  type var_lib_t;
+  class tcp_socket { name_bind setopt bind create accept getattr shutdown listen node_bind read write };
+  class chr_file { read getattr open };
+  class dir { read write search open };
+  class file { execute read lock execute_no_trans write getattr open ioctl };
+}
 
 type deslicer_t;
-domain_type(deslicer_t)
-
 type deslicer_exec_t;
-domain_entry_file(deslicer_t,deslicer_exec_t)
+init_daemon_domain(deslicer_t,deslicer_exec_t)
 
 type deslicer_var_lib_t;
 files_type(deslicer_var_lib_t)
 
+type slic3r_t;
+type slic3r_exec_t;
+domain_type(slic3r_t)
+domain_entry_file(slic3r_t,slic3r_exec_t)
+domtrans_pattern(deslicer_t, slic3r_exec_t, slic3r_t)
+
 ######################################
+##============= ROLES ==============
+role system_r types slic3r_t;
 
-#
-#
+allow deslicer_t bin_t:file execute;
+allow deslicer_t deslicer_var_lib_t:dir { read search open };
+allow deslicer_t deslicer_var_lib_t:file { read write getattr open lock };
+allow deslicer_t jboss_management_port_t:tcp_socket name_bind;
+allow deslicer_t ldconfig_exec_t:file { read execute open execute_no_trans };
+allow deslicer_t node_t:tcp_socket node_bind;
+allow deslicer_t passwd_file_t:file { read getattr open };
+allow deslicer_t proc_t:file { read getattr open };
+allow deslicer_t self:tcp_socket { getattr setopt shutdown bind create accept listen read write};
+allow deslicer_t shell_exec_t:file { execute execute_no_trans };
+#!!!! This avc can be allowed using the boolean 'global_ssp'
 
-ifdef(<code>targeted_policy',</code>
+allow deslicer_t urandom_device_t:chr_file { read getattr open };
+allow deslicer_t user_home_dir_t:dir search;
+allow deslicer_t home_root_t:dir search;
 
-#allow mock_t self:process { execheap execmem };
-#unconfined_domain_noaudit(mock_t)
-role system_r types deslicer_t;
+#============= slic3r_t ==============
+allow slic3r_t deslicer_var_lib_t:file { read write getattr open ioctl };
+allow slic3r_t init_t:unix_stream_socket ioctl;
+#!!!! This avc can be allowed using the boolean 'global_ssp'
 
-#allow mock_t mock_var_lib_t:file execmod;
+allow slic3r_t urandom_device_t:chr_file { read open };
+allow slic3r_t var_lib_t:dir search;
+allow slic3r_t deslicer_var_lib_t:dir search;
 
-deslicer_domtrans(unconfined_t)
-
-')
