@@ -62,7 +62,7 @@ def listdone(j, con):
   return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': encodestring(x)}, zip(files, sizes))}
 
 def getdone(j, con):
-  idx = j['id']
+  idx = os.basename(j['id'])
   name = os.path.join(os.path.abspath('gcode'), idx)
 
   if os.path.isfile(name):
@@ -73,6 +73,11 @@ def getdone(j, con):
   else:
     return {'r': 'fail', 'm': 'file "{}" not found'.format(name)}
 
+def listprogress(j, con):
+  files = os.listdir('work')
+  sizes = map(lambda x: os.stat(os.path.join('work', x)).st_size, files)
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': encodestring(x)}, zip(files, sizes))}
+
 def noop(j, con):
   return {}
 
@@ -80,19 +85,21 @@ def ping(j, con):
   return {'r': 'pong', 'm': 'pong', 'c':int(j['c'])+1}
 
 
-def slicethread(fname, oname, cfg):
+def slicethread(fname, oname, wname, cfg):
   retcode = subprocess.call(["slic3r",
     "--load", "config.ini" if cfg is None else cfg,
-    fname, "-o", oname+'.gcode'])
+    fname, "-o", wname+'.gcode'])
+  os.rename(wname, oname)
 
 def sliceit(j, con):
   idx = os.path.basename(j['id'])
   oname = os.path.join(os.path.abspath('gcode'), idx)
+  wname = os.path.join(os.path.abspath('work'), idx)
   fname = os.path.join(os.path.abspath('stl'), idx)
   cfg = None
   if j.has_key('cfg'):
     cfg = 'cfg/'+os.path.basename(j['cfg'])
-  th = threading.Thread(target=slicethread, args=(fname, oname, cfg))
+  th = threading.Thread(target=slicethread, args=(fname, oname, wname, cfg))
   th.start()
   return {'m': 'slicing started', 'r': 'ok'}
 
@@ -103,7 +110,8 @@ def handle(data, con):
   handlers = {'import': importit, 'ping': ping,
       'listimported': listimported, 'slice': sliceit,
       'listdone': listdone, 'getdone': getdone,
-      'importconfig': importconfig, 'listconfig': listconfigs}
+      'importconfig': importconfig, 'listconfig': listconfigs,
+      'listprogress': listprogress}
 
   if d.has_key('cmd'):
     if d['cmd'] in handlers.keys():

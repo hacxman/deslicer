@@ -101,6 +101,8 @@ def run(sock, args=sys.argv):
 
   elif 'listd' in args:
     data = {'cmd': 'listdone'}
+  elif 'listp' in args:
+    data = {'cmd': 'listprogress'}
   elif 'get' in args:
     i = args.index('get') + 1
     data = {'cmd': 'getdone', 'id': args[i]}
@@ -113,6 +115,9 @@ def run(sock, args=sys.argv):
     print
     print 'Output GCode'
     run(sock, ['listd'])
+    print
+    print 'In progress'
+    run(sock, ['listp'])
     return
   else:
     print 'unknown command parameters'
