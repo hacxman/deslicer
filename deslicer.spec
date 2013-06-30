@@ -58,6 +58,10 @@ python setup-server.py install -O1 --root=%{buildroot} --skip-build
 %{__install} -d %{buildroot}/%{_sysconfdir}/logrotate.d
 %{__install} -d %{buildroot}/%{_unitdir}
 %{__install} -d %{buildroot}/%{_sysconfdir}/sysconfig
+%{__install} -d %{buildroot}/%{_localstatedir}/lib/deslicer/stl
+%{__install} -d %{buildroot}/%{_localstatedir}/lib/deslicer/gcode
+%{__install} -d %{buildroot}/%{_localstatedir}/lib/deslicer/cfg
+%{__install} -d %{buildroot}/%{_localstatedir}/lib/deslicer/work
 
 %{__install} -m0600 conf/deslicer %{buildroot}/%{_sysconfdir}/logrotate.d/deslicer
 %{__install} -m0600 conf/deslicer.service %{buildroot}/%{_unitdir}/deslicer.service
@@ -113,6 +117,10 @@ fi
 %{_unitdir}/deslicer.service
 # %dir %attr(0755, deslicer, deslicer) %{_sysconfdir}/deslicer
 %dir %attr(0755, deslicer, deslicer) %{_localstatedir}/lib/deslicer
+%dir %attr(0755, deslicer, deslicer) %{_localstatedir}/lib/deslicer/stl
+%dir %attr(0755, deslicer, deslicer) %{_localstatedir}/lib/deslicer/gcode
+%dir %attr(0755, deslicer, deslicer) %{_localstatedir}/lib/deslicer/cfg
+%dir %attr(0755, deslicer, deslicer) %{_localstatedir}/lib/deslicer/work
 %{python_sitelib}/deslicer_server/*.py[c,o]
 %{python_sitelib}/deslicer_server/*.py
 %{_bindir}/deslicerd
