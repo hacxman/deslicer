@@ -25,13 +25,14 @@ def importit(j, con):
 
 def listimported(j, con):
   files = os.listdir('stl')
-  sizes = map(lambda x: os.stat(os.path.join('stl', x)).st_size, files)
+  stats = map(lambda x: os.stat(os.path.join('stl', x)), files)
 
   cur = con.cursor()
   a = cur.execute('select * from stl')
   nms = dict(map(lambda x: (x['localname'], x['origname']), a))
 
-  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': nms['stl/'+x]}, zip(files, sizes))}
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y.st_size,
+    'mtime': y.st_mtime, 'nm': nms['stl/'+x]}, zip(files, stats))}
 
 def importconfig(j, con):
   if j.has_key('data'):
@@ -47,22 +48,24 @@ def importconfig(j, con):
 
 def listconfigs(j, con):
   files = os.listdir('cfg')
-  sizes = map(lambda x: os.stat(os.path.join('cfg', x)).st_size, files)
+  stats = map(lambda x: os.stat(os.path.join('cfg', x)), files)
 
   cur = con.cursor()
   a = cur.execute(u'select * from configs')
   nms = dict(map(lambda x: (x['localname'], x['origname']), a))
 
   print 'in db:', nms
-  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': nms['cfg/'+x]}, zip(files, sizes))}
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y.st_size,
+    'mtime': y.st_mtime, 'nm': nms['cfg/'+x]}, zip(files, stats))}
 
 def listdone(j, con):
   files = os.listdir('gcode')
-  sizes = map(lambda x: os.stat(os.path.join('gcode', x)).st_size, files)
-  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': encodestring(x)}, zip(files, sizes))}
+  stats = map(lambda x: os.stat(os.path.join('gcode', x)), files)
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y.st_size,
+    'mtime': y.st_mtime, 'nm': encodestring(x)}, zip(files, stats))}
 
 def getdone(j, con):
-  idx = os.basename(j['id'])
+  idx = os.path.basename(j['id'])
   name = os.path.join(os.path.abspath('gcode'), idx)
 
   if os.path.isfile(name):
@@ -75,8 +78,9 @@ def getdone(j, con):
 
 def listprogress(j, con):
   files = os.listdir('work')
-  sizes = map(lambda x: os.stat(os.path.join('work', x)).st_size, files)
-  return {'files': map(lambda (x,y): {'id': x, 'sz': y, 'nm': encodestring(x)}, zip(files, sizes))}
+  stats = map(lambda x: os.stat(os.path.join('work', x)), files)
+  return {'files': map(lambda (x,y): {'id': x, 'sz': y.st_size,
+    'mtime': y.st_mtime, 'nm': encodestring(x)}, zip(files, stats))}
 
 def noop(j, con):
   return {}
@@ -89,13 +93,24 @@ def slicethread(fname, oname, wname, cfg):
   retcode = subprocess.call(["slic3r",
     "--load", "config.ini" if cfg is None else cfg,
     fname, "-o", wname+'.gcode'])
-  os.rename(wname, oname)
+  try:
+    os.unlink(oname+'.gcode')
+  except OSError as e:
+    pass
+  finally:
+    try:
+      os.rename(wname+'.gcode', oname+'.gcode')
+    except Exception:
+      print wname+'.gcode'
+      print oname+'.gcode'
+      pass
 
 def sliceit(j, con):
   idx = os.path.basename(j['id'])
   oname = os.path.join(os.path.abspath('gcode'), idx)
   wname = os.path.join(os.path.abspath('work'), idx)
   fname = os.path.join(os.path.abspath('stl'), idx)
+  print fname, oname, wname
   cfg = None
   if j.has_key('cfg'):
     cfg = 'cfg/'+os.path.basename(j['cfg'])
@@ -113,11 +128,10 @@ def handle(data, con):
       'importconfig': importconfig, 'listconfig': listconfigs,
       'listprogress': listprogress}
 
+  hndlr = noop
   if d.has_key('cmd'):
     if d['cmd'] in handlers.keys():
       hndlr = handlers[d['cmd']]
-    else:
-      hndlr = noop
     print 'cmd:', d['cmd']
 
   r = hndlr(d, con)
