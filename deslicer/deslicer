@@ -5,6 +5,7 @@ import sys
 import base64
 import os
 import time
+import ssl
 
 def readupto(fd, c='\n'):
   data = ''
@@ -143,13 +144,17 @@ def run(sock, args=sys.argv):
 
 
 if __name__=="__main__":
-  HOST, PORT = "qwop.doma", 9999
+  HOST, PORT = "localhost", 10000
 
   # Create a socket (SOCK_STREAM means a TCP socket)
-  sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-  sock.connect((HOST, PORT))
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sslsock = ssl.wrap_socket(sock,
+    #ca_certs = "/etc/ca_certs_file",
+    cert_reqs = ssl.CERT_NONE,
+    ssl_version=ssl.PROTOCOL_TLSv1)
+  sslsock.connect((HOST, PORT))
 
   try:
-    run(sock)
+    run(sslsock)
   finally:
     sock.close()
