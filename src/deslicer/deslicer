@@ -7,6 +7,15 @@ import os
 import time
 import ssl
 
+def recvupto(sock, c='\n'):
+  data = ''
+  while True:
+    d = sock.recv(1)
+    data += d
+    if d == c:
+       return data
+  return data
+
 def readupto(fd, c='\n'):
   data = ''
   while True:
@@ -15,7 +24,6 @@ def readupto(fd, c='\n'):
     if d == c:
        return data
   return data
-
 
 def talkto(data, sock):
     data = json.dumps(data)
@@ -34,13 +42,13 @@ def talkto(data, sock):
 
 
     # Receive data from the server and shut down
-    fd = sock.fileno()
-    n = int(readupto(fd).strip())
+#    fd = sock.fileno()
+    n = int(recvupto(sock).strip()) #int(readupto(fd).strip())
     cnt = 0
     res = ''
     while cnt != n:
       sz = 4096 if cnt < n - 4096 else n - cnt
-      r = os.read(fd, sz)
+      r = sock.recv(sz) #os.read(fd, sz)
       cnt += len(r)
       res += r
       if n > 30000:
@@ -121,6 +129,8 @@ def run(sock, args=sys.argv):
     print 'In progress'
     run(sock, ['listp'])
     return
+  elif 'stats' in args:
+    data = {'cmd': 'getstats'}
   else:
     print 'unknown command parameters'
     print
@@ -141,6 +151,10 @@ def run(sock, args=sys.argv):
     fdata = base64.decodestring(ret['data'])
     with open(args[i], 'w+') as fin:
       fin.write(fdata)
+  if 'stats' in args:
+    print 'Total command count:', ret['cnt']
+    print 'Total bytes sent:', ret['snt']
+    print 'Total bytes received:', ret['rcv']
 
 
 if __name__=="__main__":
@@ -157,4 +171,4 @@ if __name__=="__main__":
   try:
     run(sslsock)
   finally:
-    sock.close()
+    sslsock.close()
