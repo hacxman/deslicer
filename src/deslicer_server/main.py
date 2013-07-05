@@ -58,29 +58,35 @@ def handle(sock):
     sock.sendall(str(len(response))+'\n'+response)
 
 import ssl
+import traceback
 def do_main_program():
   bindsocket = socket.socket()
   bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  bindsocket.bind(('', 10000))
+  bindsocket.bind(('', 9999))
   bindsocket.listen(5)
   while True:
     newsocket, fromaddr = bindsocket.accept()
-    connstream = ssl.wrap_socket(newsocket,
-      server_side=True,
-      certfile="/home/mzatko/personal/deslicer/src/conf/cert/server.crt",
-      keyfile="/home/mzatko/personal/deslicer/src/conf/cert/server.key",
-      ssl_version=ssl.PROTOCOL_TLSv1)
     try:
+      connstream = ssl.wrap_socket(newsocket,
+        server_side=True,
+        certfile="/etc/pki/tls/deslicer/server.crt",
+        keyfile="/etc/pki/tls/deslicer/server.key",
+        ssl_version=ssl.PROTOCOL_TLSv1)
       handle(connstream)
+    except Exception as e:
+      print traceback.format_exc()
     finally:
-      connstream.shutdown(socket.SHUT_RDWR)
+      try:
+        connstream.shutdown(socket.SHUT_RDWR)
+      except socket.error as e:
+        print traceback.format_exc()
       connstream.close()
 
 def initial_program_setup():
   import ConfigParser
 
-  config = ConfigParser.ConfigParser()
-  config.read('penis.cfg')
+  #config = ConfigParser.ConfigParser()
+  #config.read('penis.cfg')
   print ('SETUUUUUUUUUP!!!!!')
 
 def program_cleanup():
