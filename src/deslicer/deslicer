@@ -158,7 +158,7 @@ def run(sock, args=sys.argv):
 
 
 if __name__=="__main__":
-  HOST, PORT = "localhost", 10000
+  HOST, PORT = "localhost", 9999
 
   # Create a socket (SOCK_STREAM means a TCP socket)
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
