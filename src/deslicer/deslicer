@@ -75,7 +75,7 @@ COMMANDS are one of:
   journal                   - show log of slicings
   """
 
-def run(sock, args=sys.argv):
+def run(connect, args=sys.argv):
   if '-h' in args:
     show_help()
     exit(2)
@@ -120,16 +120,16 @@ def run(sock, args=sys.argv):
     data = {'cmd': 'getdone', 'id': args[i]}
   elif 'list' in args:
     print 'STL files already on server'
-    run(sock, ['listi'])
+    run(connect, ['listi'])
     print
     print 'Slic3r config files already on server'
-    run(sock, ['listc'])
+    run(connect, ['listc'])
     print
     print 'Output GCode'
-    run(sock, ['listd'])
+    run(connect, ['listd'])
     print
     print 'In progress'
-    run(sock, ['listp'])
+    run(connect, ['listp'])
     return
   elif 'stats' in args:
     data = {'cmd': 'getstats'}
@@ -141,6 +141,7 @@ def run(sock, args=sys.argv):
     show_help()
     exit(3)
 
+  sock = connect()
   ret = talkto(data, sock)
   if ret.has_key(u'm'):
     print ret['m']
@@ -170,20 +171,41 @@ def run(sock, args=sys.argv):
       print '   ', r['action'], 'at', r['timestamp']
       print '    status:', r['status']
 
+_sock = None
+def connect_tpl(HOST, PORT):
+  # Create a socket (SOCK_STREAM means a TCP socket)
+  global _sock
+  if _sock is None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    _sock = ssl.wrap_socket(sock,
+      #ca_certs = "/etc/ca_certs_file",
+      cert_reqs = ssl.CERT_NONE,
+      ssl_version=ssl.PROTOCOL_TLSv1)
+    _sock.connect((HOST, int(PORT)))
+  return _sock
 
+def connect_close():
+  if _sock is None:
+    return
+  _sock.close()
 
 if __name__=="__main__":
-  HOST, PORT = "localhost", 9999
+  import ConfigParser
+  config = ConfigParser.ConfigParser()
+  if len(config.read(os.path.expanduser('~/.deslicer'))) == 0:
+    print 'cannot parse ~/.deslicer'
+    exit(1)
+  hostname = config.get('client', 'server')
+  hsp = hostname.split(':')
+  if len(hsp) == 1:
+    #default port for now
+    hsp.append('9999')
 
-  # Create a socket (SOCK_STREAM means a TCP socket)
-  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  sslsock = ssl.wrap_socket(sock,
-    #ca_certs = "/etc/ca_certs_file",
-    cert_reqs = ssl.CERT_NONE,
-    ssl_version=ssl.PROTOCOL_TLSv1)
-  sslsock.connect((HOST, PORT))
+  HOST, PORT = hsp
+  from functools import partial
+  connect = partial(connect_tpl, HOST, PORT)
 
   try:
-    run(sslsock)
+    run(connect)
   finally:
-    sslsock.close()
+    connect_close()
