@@ -9,17 +9,24 @@ import threading
 import subprocess
 import sqlite3
 
-def logaccess(cmd, con):
+def logaccess(dn, up, cmd, con):
   con.execute(u'''
-    insert into stats(cmd, timestamp) values (?, DateTime(\'now\'))
-    ''', (cmd,))
+    insert into stats(cmd, timestamp, sent, recvd) values (?, DateTime(\'now\'), ?, ?)
+    ''', (cmd,up,dn))
   con.commit()
 
-def logtraffic(size, con, sent = True):
-  con.execute(u'''
-    insert into stats({}, timestamp) values (?, DateTime(\'now\'))
-    '''.format('sent' if sent else 'recvd'), (size,))
-  con.commit()
+
+#def logaccess(cmd, con):
+#  con.execute(u'''
+#    insert into stats(cmd, timestamp) values (?, DateTime(\'now\'))
+#    ''', (cmd,))
+#  con.commit()
+#
+#def logtraffic(size, con, sent = True):
+#  con.execute(u'''
+#    insert into stats({}, timestamp) values (?, DateTime(\'now\'))
+#    '''.format('sent' if sent else 'recvd'), (size,))
+#  con.commit()
 
 def importit(j, con):
   if j.has_key('data'):
@@ -145,21 +152,20 @@ def handle(data, con):
       'listprogress': listprogress, 'getstats': getstats}
 
   hndlr = noop
+  cmd = 'noop'
   if d.has_key('cmd'):
     if d['cmd'] in handlers.keys():
-      hndlr = handlers[d['cmd']]
-    print 'cmd:', d['cmd']
-    logaccess(d['cmd'], con)
-  else:
-    logaccess(str(hndlr), con)
+      cmd = d['cmd']
+      hndlr = handlers[cmd]
 
-  if d.has_key('data'):
-    logtraffic(len(data), con, sent=False)
+#  print 'cmd:', cmd
 
-  r = hndlr(d, con)
+  try:
+    r = hndlr(d, con)
+    result = json.dumps(r)
+  except Exception as e:
+    sys.stderr.write(e)
+    result = json.dumps({u'm':unicode(e), u'r':u'fail'})
+  logaccess(len(d), len(result), unicode(cmd), con)
 
-
-  result = json.dumps(r)
-  if r.has_key('data'):
-    logtraffic(len(result), con)
   return result
