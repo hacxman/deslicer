@@ -116,12 +116,15 @@ def slicethread(fname, oname, wname, cfg):
     "--load", "config.ini" if cfg is None else cfg,
     fname, "-o", wname+'.gcode'])
   con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
-    ('slice {} {}'.format(fname, oname), proc.pid, 'start',
+    ('slice {} -c {}'.format(os.path.basename(fname),
+                             os.path.basename(cfg)), proc.pid, 'start',
       0 if proc.returncode == None else 1 ))
   con.commit()
   retcode = proc.wait()
   con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
-    ('slice {} {}'.format(fname, oname), proc.pid, 'stop', proc.returncode))
+    ('slice {} -c {}'.format(os.path.basename(fname),
+                             os.path.basename(cfg)), proc.pid, 'stop',
+      proc.returncode))
   con.commit()
   try:
     os.unlink(oname+'.gcode')
@@ -153,6 +156,11 @@ def getstats(j, con):
   return {'r': 'ok', 'm': 'ok', 'cnt': r[0][0],
       'rcv': r[0][1], 'snt': r[0][2]}
 
+def getjournal(j, con):
+  r = con.execute(u'select * from journal order by timestamp desc;')
+  return {'r': 'ok', 'm': 'ok', 'data': list(map(dict,r))}
+
+
 def handle(data, con):
   d = json.loads(data)
 
@@ -160,7 +168,8 @@ def handle(data, con):
       'listimported': listimported, 'slice': sliceit,
       'listdone': listdone, 'getdone': getdone,
       'importconfig': importconfig, 'listconfig': listconfigs,
-      'listprogress': listprogress, 'getstats': getstats}
+      'listprogress': listprogress, 'getstats': getstats,
+      'journal': getjournal}
 
   hndlr = noop
   cmd = 'noop'

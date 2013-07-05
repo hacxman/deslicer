@@ -12,7 +12,7 @@ def recvupto(sock, c='\n'):
   while True:
     d = sock.recv(1)
     data += d
-    if d == c:
+    if d == c or d == '':
        return data
   return data
 
@@ -72,6 +72,7 @@ COMMANDS are one of:
   slice UPLOADEDID [-c CFG] - slice an uploaded STL [and use CFG config file]
   get SLICEDID              - downloaded sliced GCode
   stats                     - show server statistics
+  journal                   - show log of slicings
   """
 
 def run(sock, args=sys.argv):
@@ -132,6 +133,8 @@ def run(sock, args=sys.argv):
     return
   elif 'stats' in args:
     data = {'cmd': 'getstats'}
+  elif 'journal' in args:
+    data = {'cmd': 'journal'}
   else:
     print 'unknown command parameters'
     print
@@ -159,6 +162,12 @@ def run(sock, args=sys.argv):
     print 'Total command count:', ret['cnt']
     print 'Total bytes sent:', ret['snt']
     print 'Total bytes received:', ret['rcv']
+  if 'journal' in args and ret.has_key('data'):
+    for r in ret['data']:
+      print r['cmd']
+      print '   ', r['action'], 'at', r['timestamp']
+      print '    status:', r['status']
+
 
 
 if __name__=="__main__":
