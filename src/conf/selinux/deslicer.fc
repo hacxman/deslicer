@@ -1,3 +1,6 @@
 /usr/bin/slic3r              --      gen_context(system_u:object_r:slic3r_exec_t,s0)
 /usr/bin/deslicerd              --      gen_context(system_u:object_r:deslicer_exec_t,s0)
 /var/lib/deslicer(/.*)?                 gen_context(system_u:object_r:deslicer_var_lib_t,s0)
+/etc/pki/tls/deslicer/server.crt    --      gen_context(system_u:object_r:cert_t,s0)
+/etc/pki/tls/deslicer/server.key    --      gen_context(system_u:object_r:cert_t,s0)
+

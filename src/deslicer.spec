@@ -79,6 +79,8 @@ rm %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.if
 rm -rf %{buildroot}/usr/share/selinux/packages/deslicer/tmp
 popd
 
+%{__install} -d %{buildroot}/etc/pki/tls/deslicer
+
 %post server
 useradd deslicer
 systemctl enable deslicer
@@ -89,9 +91,14 @@ semodule -i /usr/share/selinux/packages/deslicer/deslicer.pp
 semanage fcontext -a -t deslicer_var_lib_t '%{_localstatedir}/lib/deslicer(/.*)?' 2>/dev/null || :
 semanage fcontext -a -t deslicer_exec_t '%{_bindir}/deslicerd' 2>/dev/null || :
 semanage fcontext -a -t slic3r_exec_t '%{_bindir}/slic3r' 2>/dev/null || :
+semanage fcontext -a -s system_u '%{_sysconfdir}/pki/tls/deslicer/server.crt' 2>/dev/null || :
+semanage fcontext -a -s system_u '%{_sysconfdir}/pki/tls/deslicer/server.key' 2>/dev/null || :
 restorecon -R '%{_localstatedir}/lib/deslicer/' 2>/dev/null || :
 restorecon '%{_bindir}/deslicerd' 2>/dev/null || :
 restorecon '%{_bindir}/slic3r' 2>/dev/null || :
+restorecon '%{_sysconfdir}/pki/tls/deslicer' 2>/dev/null || :
+restorecon '%{_sysconfdir}/pki/tls/deslicer/server.crt' 2>/dev/null || :
+restorecon '%{_sysconfdir}/pki/tls/deslicer/server.key' 2>/dev/null || :
 
 %preun server
 if [ $1 = 0 ] ; then
@@ -103,6 +110,10 @@ fi
 if [ $1 -eq 0 ] ; then  # final removal
     semanage fcontext -d -t deslicer_var_lib_t '%{_localstatedir}/lib/deslicer(/.*)?' 2>/dev/null || :
     semanage fcontext -d -t deslicer_exec_t '%{_bindir}/deslicerd' 2>/dev/null || :
+    semanage fcontext -d -t slic3r_exec_t '%{_bindir}/slic3r' 2>/dev/null || :
+    semanage fcontext -d -s system_u '%{_sysconfdir}/pki/tls/deslicer/server.crt' 2>/dev/null || :
+    semanage fcontext -d -t system_u '%{_sysconfdir}/pki/tls/deslicer/server.key' 2>/dev/null || :
+
 fi
 
 %files
@@ -125,6 +136,7 @@ fi
 %{python_sitelib}/deslicer_server/*.py
 %{_bindir}/deslicerd
 %{python_sitelib}/deslicer_server-*.egg-info
+%dir %attr(0700, deslicer, deslicer) %{_sysconfdir}/pki/tls/deslicer
 
 %files server-selinux
 %dir /usr/share/selinux/packages/deslicer

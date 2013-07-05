@@ -17,6 +17,7 @@ require {
   type slic3r_t;
   type bin_t;
   type var_lib_t;
+  type cert_t;
   class tcp_socket { name_bind setopt bind create accept getattr shutdown listen node_bind read write };
   class chr_file { read getattr open };
   class dir { read write search open };
@@ -42,11 +43,13 @@ role system_r types slic3r_t;
 
 allow deslicer_t bin_t:file execute;
 allow deslicer_t deslicer_var_lib_t:dir { read search open remove_name add_name write };
-allow deslicer_t deslicer_var_lib_t:file { read write getattr open lock rename unlink };
+allow deslicer_t deslicer_var_lib_t:file { read write getattr open lock rename unlink create };
 allow deslicer_t jboss_management_port_t:tcp_socket name_bind;
 allow deslicer_t ldconfig_exec_t:file { read execute open execute_no_trans };
 allow deslicer_t node_t:tcp_socket node_bind;
 allow deslicer_t passwd_file_t:file { read getattr open };
+allow deslicer_t cert_t:file { read getattr open };
+allow deslicer_t cert_t:dir { search };
 allow deslicer_t proc_t:file { read getattr open };
 allow deslicer_t self:tcp_socket { getattr setopt shutdown bind create accept listen read write};
 allow deslicer_t shell_exec_t:file { execute execute_no_trans };
