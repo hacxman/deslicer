@@ -150,9 +150,11 @@ def run(sock, args=sys.argv):
   if ret.has_key('files'):
     print 'Response:'
     for f in ret['files']:
-      print base64.decodestring(f['nm']), '-', 'id:', f['id'],
-      print 'size:', f['sz'], 'mtime:',
-      print time.strftime('%X %x %Z', time.localtime(float(f['mtime'])))
+      print 'id:', f['id']
+      print '    file:', base64.decodestring(f['nm'])
+      print '    modified at',
+      print time.strftime('%X %x %Z,', time.localtime(float(f['mtime']))),
+      print 'size:', f['sz']
 
   if 'get' in args and ret.has_key(u'data'):
     fdata = base64.decodestring(ret['data'])
