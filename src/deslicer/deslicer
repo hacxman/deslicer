@@ -71,6 +71,7 @@ COMMANDS are one of:
   listd                     - list sliced files
   slice UPLOADEDID [-c CFG] - slice an uploaded STL [and use CFG config file]
   get SLICEDID              - downloaded sliced GCode
+  stats                     - show server statistics
   """
 
 def run(sock, args=sys.argv):
@@ -140,6 +141,9 @@ def run(sock, args=sys.argv):
   ret = talkto(data, sock)
   if ret.has_key(u'm'):
     print ret['m']
+  if ret.has_key(u'r'):
+    if not (ret.has_key(u'm') and (ret['r'] == ret['m'])):
+      print ret['r']
   if ret.has_key('files'):
     print 'Response:'
     for f in ret['files']:

@@ -36,6 +36,7 @@ def handle(sock):
     CREATE TABLE configs (id integer primary key, localname varchar, origname varchar);
     CREATE TABLE stl (id integer primary key, localname varchar, origname varchar);
     CREATE TABLE stats (id integer primary key, cmd varchar, timestamp datetime not null, recvd integer default 0, sent integer default 0);
+    CREATE TABLE journal (id integer primary key, cmd varchar, pid integer, timestamp datetime not null, action varchar, status integer);
     COMMIT;
     ''')
     con.commit()

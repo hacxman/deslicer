@@ -109,9 +109,20 @@ def ping(j, con):
 
 
 def slicethread(fname, oname, wname, cfg):
-  retcode = subprocess.call(["slic3r",
+  con = sqlite3.connect('db.sqlite')
+  con.row_factory = sqlite3.Row
+
+  proc = subprocess.Popen(["slic3r",
     "--load", "config.ini" if cfg is None else cfg,
     fname, "-o", wname+'.gcode'])
+  con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
+    ('slice {} {}'.format(fname, oname), proc.pid, 'start',
+      0 if proc.returncode == None else 1 ))
+  con.commit()
+  retcode = proc.wait()
+  con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
+    ('slice {} {}'.format(fname, oname), proc.pid, 'stop', proc.returncode))
+  con.commit()
   try:
     os.unlink(oname+'.gcode')
   except OSError as e:
@@ -140,7 +151,7 @@ def sliceit(j, con):
 def getstats(j, con):
   r = tuple(con.execute(u'select count(cmd) as cnt, sum(recvd) as recvd, sum(sent) as sent from stats;'))
   return {'r': 'ok', 'm': 'ok', 'cnt': r[0][0],
-      'snt': r[0][1], 'rcv': r[0][2]}
+      'rcv': r[0][1], 'snt': r[0][2]}
 
 def handle(data, con):
   d = json.loads(data)
