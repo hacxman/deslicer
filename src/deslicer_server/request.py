@@ -9,6 +9,24 @@ import threading
 import subprocess
 import sqlite3
 
+def logaccess(dn, up, cmd, con):
+  con.execute(u'''
+    insert into stats(cmd, timestamp, sent, recvd) values (?, DateTime(\'now\'), ?, ?)
+    ''', (cmd,up,dn))
+  con.commit()
+
+
+#def logaccess(cmd, con):
+#  con.execute(u'''
+#    insert into stats(cmd, timestamp) values (?, DateTime(\'now\'))
+#    ''', (cmd,))
+#  con.commit()
+#
+#def logtraffic(size, con, sent = True):
+#  con.execute(u'''
+#    insert into stats({}, timestamp) values (?, DateTime(\'now\'))
+#    '''.format('sent' if sent else 'recvd'), (size,))
+#  con.commit()
 
 def importit(j, con):
   if j.has_key('data'):
@@ -42,6 +60,7 @@ def importconfig(j, con):
     with con:
       con.execute(u'insert into configs(localname, origname) values (?, ?)',
         (fname, j['name']))
+      con.commit()
   return {'r': 'ok',
       'm': 'recieved {} B'.format(len(j['data'])),
       'id': fname}
@@ -118,6 +137,10 @@ def sliceit(j, con):
   th.start()
   return {'m': 'slicing started', 'r': 'ok'}
 
+def getstats(j, con):
+  r = tuple(con.execute(u'select count(cmd) as cnt, sum(recvd) as recvd, sum(sent) as sent from stats;'))
+  return {'r': 'ok', 'm': 'ok', 'cnt': r[0][0],
+      'snt': r[0][1], 'rcv': r[0][2]}
 
 def handle(data, con):
   d = json.loads(data)
@@ -126,15 +149,23 @@ def handle(data, con):
       'listimported': listimported, 'slice': sliceit,
       'listdone': listdone, 'getdone': getdone,
       'importconfig': importconfig, 'listconfig': listconfigs,
-      'listprogress': listprogress}
+      'listprogress': listprogress, 'getstats': getstats}
 
   hndlr = noop
+  cmd = 'noop'
   if d.has_key('cmd'):
     if d['cmd'] in handlers.keys():
-      hndlr = handlers[d['cmd']]
-    print 'cmd:', d['cmd']
+      cmd = d['cmd']
+      hndlr = handlers[cmd]
 
-  r = hndlr(d, con)
+#  print 'cmd:', cmd
 
+  try:
+    r = hndlr(d, con)
+    result = json.dumps(r)
+  except Exception as e:
+    sys.stderr.write(e)
+    result = json.dumps({u'm':unicode(e), u'r':u'fail'})
+  logaccess(len(d), len(result), unicode(cmd), con)
 
-  return json.dumps(r)
+  return result

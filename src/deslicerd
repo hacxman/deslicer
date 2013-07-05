@@ -2,6 +2,7 @@
 from deslicer_server import main
 import sys
 import os
+import traceback
 
 if __name__=='__main__':
   if '-d' in sys.argv:
@@ -13,7 +14,7 @@ if __name__=='__main__':
     main.reload_program_config()
     main.do_main_program()
   except Exception as e:
-    print (e)
+    print (traceback.format_exc())
     main.program_cleanup()
     raise e
 

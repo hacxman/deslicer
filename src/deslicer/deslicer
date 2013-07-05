@@ -5,6 +5,16 @@ import sys
 import base64
 import os
 import time
+import ssl
+
+def recvupto(sock, c='\n'):
+  data = ''
+  while True:
+    d = sock.recv(1)
+    data += d
+    if d == c:
+       return data
+  return data
 
 def readupto(fd, c='\n'):
   data = ''
@@ -14,7 +24,6 @@ def readupto(fd, c='\n'):
     if d == c:
        return data
   return data
-
 
 def talkto(data, sock):
     data = json.dumps(data)
@@ -33,13 +42,13 @@ def talkto(data, sock):
 
 
     # Receive data from the server and shut down
-    fd = sock.fileno()
-    n = int(readupto(fd).strip())
+#    fd = sock.fileno()
+    n = int(recvupto(sock).strip()) #int(readupto(fd).strip())
     cnt = 0
     res = ''
     while cnt != n:
       sz = 4096 if cnt < n - 4096 else n - cnt
-      r = os.read(fd, sz)
+      r = sock.recv(sz) #os.read(fd, sz)
       cnt += len(r)
       res += r
       if n > 30000:
@@ -120,6 +129,8 @@ def run(sock, args=sys.argv):
     print 'In progress'
     run(sock, ['listp'])
     return
+  elif 'stats' in args:
+    data = {'cmd': 'getstats'}
   else:
     print 'unknown command parameters'
     print
@@ -140,16 +151,24 @@ def run(sock, args=sys.argv):
     fdata = base64.decodestring(ret['data'])
     with open(args[i], 'w+') as fin:
       fin.write(fdata)
+  if 'stats' in args:
+    print 'Total command count:', ret['cnt']
+    print 'Total bytes sent:', ret['snt']
+    print 'Total bytes received:', ret['rcv']
 
 
 if __name__=="__main__":
-  HOST, PORT = "qwop.doma", 9999
+  HOST, PORT = "localhost", 9999
 
   # Create a socket (SOCK_STREAM means a TCP socket)
-  sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-  sock.connect((HOST, PORT))
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sslsock = ssl.wrap_socket(sock,
+    #ca_certs = "/etc/ca_certs_file",
+    cert_reqs = ssl.CERT_NONE,
+    ssl_version=ssl.PROTOCOL_TLSv1)
+  sslsock.connect((HOST, PORT))
 
   try:
-    run(sock)
+    run(sslsock)
   finally:
-    sock.close()
+    sslsock.close()
