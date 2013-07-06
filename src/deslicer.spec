@@ -39,6 +39,14 @@ Requires(...): policycoreutils-python
 %description server-selinux
 SELinux policy for Deslicer server
 
+%package utils
+Summary: Utilities for deslicer
+Buildarch: noarch
+Requires: python
+
+%description utils
+Deslicer utilities
+
 %prep
 %setup -q
 
@@ -141,6 +149,10 @@ fi
 %files server-selinux
 %dir /usr/share/selinux/packages/deslicer
 /usr/share/selinux/packages/deslicer/deslicer.pp
+
+%files utils
+%{_bindir}/deslicer_merge
+%{_bindir}/deslicer_refresh
 
 %changelog
 * Wed Jun 26 2013 Maros Zatko <zavinac@www.wwwbodkask.sk> - 0.0.1-1

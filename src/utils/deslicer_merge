@@ -1,0 +1,68 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Slic3r configs merging utility
+#
+
+from __future__ import print_function
+
+import os
+import sys
+
+
+SLICER_CONFIGS = '~/.Slic3r'
+SUBCONFIGS = ['print', 'filament', 'printer']
+
+SLICER_PATH = os.path.expanduser(SLICER_CONFIGS)
+
+
+def merge():
+    to_merge = list()
+
+    for sub in SUBCONFIGS:
+        sub_path = os.path.join(SLICER_PATH, sub)
+        if not os.path.exists(sub_path):
+            sys.stderr.write('Config dir {0} not found\n'.format(sub_path))
+            sys.exit(1)
+
+        print('Available configuration files for {0}:'.format(sub))
+        avail = dict()
+        for num, cfg_file in enumerate(os.listdir(sub_path)):
+            print('{0:3}: {1}'.format(num + 1, cfg_file))
+            avail[num + 1] = cfg_file
+
+        while True:
+            try:
+                choice = raw_input('\nYour choice? ')
+            except EOFError:
+                sys.exit(1)
+
+            if not str(choice).isdigit():
+                print('Enter number')
+                continue
+
+            choice = int(choice)
+            if choice < 1 or choice > num + 1:
+                print('Bad range')
+                continue
+
+            print(avail[choice])
+            to_merge.append(os.path.join(sub_path, avail[choice]))
+            break
+
+        print()
+
+    name = '∿'.join(map(lambda x: x.replace('.ini', ''),
+                          map(os.path.basename, to_merge)))
+    fname = '{0}.ini'.format(name)
+    with open(fname, 'w') as out:
+        for cfg_path in to_merge:
+            out.write("# from {0}\n".format(os.path.basename(cfg_path)))
+            with open(cfg_path) as cfg:
+                out.write(cfg.read())
+
+    print('Config written to {0}'.format(fname))
+
+
+if __name__ == "__main__":
+    merge()
