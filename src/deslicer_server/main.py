@@ -61,7 +61,7 @@ def handle(sock):
 import ssl
 import traceback
 def do_main_program():
-  bindsocket = socket.socket()
+  bindsocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
   bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   bindsocket.bind(('', 9999))
   bindsocket.listen(5)
