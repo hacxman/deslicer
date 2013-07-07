@@ -195,13 +195,21 @@ if __name__=="__main__":
   if len(config.read(os.path.expanduser('~/.deslicer'))) == 0:
     print 'cannot parse ~/.deslicer'
     exit(1)
-  hostname = config.get('client', 'server')
-  hsp = hostname.split(':')
+  hostname = config.get('client', 'server').strip()
+  if hostname.startswith('['):
+    hi = hostname.index(']')
+    hc = hi+hostname[hi:].index(':')
+    hsp = hostname[1:hi], hostname[hc+1:]
+  else:
+    hsp = hostname.split(':')
+
   if len(hsp) == 1:
     #default port for now
     hsp.append('9999')
+  elif len(hsp) > 2:
+    hsp = hostname, '9999'
 
-  HOST, PORT = hsp
+  HOST, PORT = map(lambda x: x.strip(), hsp)
   from functools import partial
   connect = partial(connect_tpl, HOST, PORT)
 
