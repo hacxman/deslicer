@@ -176,7 +176,7 @@ def connect_tpl(HOST, PORT):
   # Create a socket (SOCK_STREAM means a TCP socket)
   global _sock
   if _sock is None:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     _sock = ssl.wrap_socket(sock,
       #ca_certs = "/etc/ca_certs_file",
       cert_reqs = ssl.CERT_NONE,
