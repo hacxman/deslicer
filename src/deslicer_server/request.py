@@ -8,6 +8,8 @@ import os
 import threading
 import subprocess
 import sqlite3
+import logging
+logging.basicConfig(filename='/var/log/deslicer.log',level=logging.DEBUG)
 
 def logaccess(dn, up, cmd, con):
   con.execute(u'''
@@ -73,7 +75,7 @@ def listconfigs(j, con):
   a = cur.execute(u'select * from configs')
   nms = dict(map(lambda x: (x['localname'], x['origname']), a))
 
-  print 'in db:', nms
+  logging.info('in db:' + repr(nms))
   return {'files': map(lambda (x,y): {'id': x, 'sz': y.st_size,
     'mtime': y.st_mtime, 'nm': nms['cfg/'+x]}, zip(files, stats))}
 
@@ -134,8 +136,8 @@ def slicethread(fname, oname, wname, cfg):
     try:
       os.rename(wname+'.gcode', oname+'.gcode')
     except Exception:
-      print wname+'.gcode'
-      print oname+'.gcode'
+      logging.info( wname+'.gcode')
+      logging.info( oname+'.gcode')
       pass
 
 def sliceit(j, con):
@@ -143,7 +145,7 @@ def sliceit(j, con):
   oname = os.path.join(os.path.abspath('gcode'), idx)
   wname = os.path.join(os.path.abspath('work'), idx)
   fname = os.path.join(os.path.abspath('stl'), idx)
-  print fname, oname, wname
+  logging.info(str(fname, oname, wname))
   cfg = None
   if j.has_key('cfg'):
     cfg = 'cfg/'+os.path.basename(j['cfg'])
@@ -160,6 +162,22 @@ def getjournal(j, con):
   r = con.execute(u'select * from journal order by timestamp desc;')
   return {'r': 'ok', 'm': 'ok', 'data': list(map(dict,r))}
 
+def wipefile(j, con):
+  typ = j['typ']
+  idx = j['idx']
+  d = {'stl': 'stl', 'cfg': 'cfg', 'done': 'gcode'}
+  if typ in d.keys():
+    fname = os.path.basename(idx)
+    fname = os.path.join(d[typ], fname)
+
+    logging.info('LALALALA')
+    if os.path.exists(fname):
+      os.unlink(fname)
+      return {'r': 'ok', 'm': '{}/{} deleted'.format(typ, idx)}
+    else:
+      return {'r': 'fail', 'm': '{}/{} doesnt exist'.format(typ, idx)}
+  else:
+    return {'r': 'fail', 'm': 'invalid type: {}'.format(typ)}
 
 def handle(data, con):
   d = json.loads(data)
@@ -169,7 +187,7 @@ def handle(data, con):
       'listdone': listdone, 'getdone': getdone,
       'importconfig': importconfig, 'listconfig': listconfigs,
       'listprogress': listprogress, 'getstats': getstats,
-      'journal': getjournal}
+      'journal': getjournal, 'del': wipefile}
 
   hndlr = noop
   cmd = 'noop'
@@ -178,13 +196,13 @@ def handle(data, con):
       cmd = d['cmd']
       hndlr = handlers[cmd]
 
-#  print 'cmd:', cmd
+  logging.info('cmd: ' + cmd)
 
   try:
     r = hndlr(d, con)
     result = json.dumps(r)
   except Exception as e:
-    sys.stderr.write(e)
+    logging.error(str(e))
     result = json.dumps({u'm':unicode(e), u'r':u'fail'})
   logaccess(len(d), len(result), unicode(cmd), con)
 
