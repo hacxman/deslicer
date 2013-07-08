@@ -74,6 +74,7 @@ python setup-server.py install -O1 --root=%{buildroot} --skip-build
 %{__install} -m0600 conf/deslicer %{buildroot}/%{_sysconfdir}/logrotate.d/deslicer
 %{__install} -m0600 conf/deslicer.service %{buildroot}/%{_unitdir}/deslicer.service
 %{__install} -m0600 conf/sysconfig-deslicerd %{buildroot}/%{_sysconfdir}/sysconfig/deslicer
+%{__install} -m0600 conf/deslicer.conf %{buildroot}/%{_sysconfdir}/deslicer.conf
 
 %{__install} -d %{buildroot}/usr/share/selinux/packages/deslicer
 %{__install} -m0600 conf/selinux/deslicer.te %{buildroot}/usr/share/selinux/packages/deslicer/deslicer.te
@@ -130,7 +131,7 @@ fi
 %{python_sitelib}/deslicer-*.egg-info
 
 %files server
-#%config(noreplace) %{_sysconfdir}/deslicer.conf
+%config(noreplace) %attr(0600, deslicer, deslicer) %{_sysconfdir}/deslicer.conf
 %config(noreplace) %{_sysconfdir}/sysconfig/deslicer
 %config(noreplace) %{_sysconfdir}/logrotate.d/deslicer
 %{_unitdir}/deslicer.service
