@@ -51,7 +51,14 @@ def handle(sock):
     print cnt
 
     print('request size:', cnt)
-    data = sock.recv(int(cnt))
+    data = ''
+    datalen = 0
+    while datalen != int(cnt):
+      d = sock.recv(int(cnt)-datalen)
+      if d == '':
+        break
+      data += d
+      datalen += len(d)
     #print(data)
 
     response = request.handle(data, con)
