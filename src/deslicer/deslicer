@@ -25,7 +25,9 @@ def readupto(fd, c='\n'):
        return data
   return data
 
-def talkto(data, sock):
+def talkto(data, sock, apikey=None):
+    if not apikey is None:
+      data['key'] = apikey
     data = json.dumps(data)
     datalen = len(data)
     sock.sendall(str(datalen)+"\n")
@@ -69,14 +71,20 @@ COMMANDS are one of:
   listi                     - list imported STLs
   listc                     - list imported configs
   listd                     - list sliced files
-  slice UPLOADEDID [-c CFG] - slice an uploaded STL [and use CFG config file]
+  listp                     - list files being worked on
+  slice UPLOADEDID [-c CFG] [--nowait | --get]
+                            - slice an uploaded STL [and use CFG config file],
+                              and optionally dont wait for worker to complete
+                              or get results and save as UPLOADEDID.gcode.
+                              (--nowait and --get are mutually exclusive)
   get SLICEDID              - downloaded sliced GCode
   stats                     - show server statistics
   journal                   - show log of slicings
   del TYPE ID               - delete file ID of stl | cfg | done TYPE
+  wait JOBID                - wait for job JOBID to complete
   """
 
-def run(connect, args=sys.argv):
+def run(connect, apikey, args=sys.argv):
   if '-h' in args:
     show_help()
     exit(2)
@@ -111,7 +119,6 @@ def run(connect, args=sys.argv):
     else:
       data = {'cmd': 'slice', 'id': args[i]}
 
-
   elif 'listd' in args:
     data = {'cmd': 'listdone'}
   elif 'listp' in args:
@@ -121,16 +128,16 @@ def run(connect, args=sys.argv):
     data = {'cmd': 'getdone', 'id': args[i]}
   elif 'list' in args:
     print 'STL files already on server'
-    run(connect, ['listi'])
+    run(connect, apikey, args=['listi'])
     print
     print 'Slic3r config files already on server'
-    run(connect, ['listc'])
+    run(connect, apikey, args=['listc'])
     print
     print 'Output GCode'
-    run(connect, ['listd'])
+    run(connect, apikey, args=['listd'])
     print
     print 'In progress'
-    run(connect, ['listp'])
+    run(connect, apikey, args=['listp'])
     return
   elif 'stats' in args:
     data = {'cmd': 'getstats'}
@@ -141,6 +148,9 @@ def run(connect, args=sys.argv):
     # typ = args[ti] # this is the type: stl, cfg, done
     # idx = args[ti+1] # filename
     data = {'cmd': 'del', 'typ': args[ti], 'idx': args[ti+1]}
+  elif 'wait' in args:
+    i = args.index('wait') + 1
+    data = {'cmd': 'wait', 'jobid': args[i]}
   else:
     print 'unknown command parameters'
     print
@@ -148,7 +158,7 @@ def run(connect, args=sys.argv):
     exit(3)
 
   sock = connect()
-  ret = talkto(data, sock)
+  ret = talkto(data, sock, apikey)
   if ret.has_key(u'm'):
     print ret['m']
   if ret.has_key(u'r'):
@@ -177,6 +187,15 @@ def run(connect, args=sys.argv):
       print '   ', r['action'], 'at', r['timestamp']
       print '    status:', r['status']
 
+  if ret.has_key(u'r'):
+    if ret['r'] == 'fail':
+      exit(1)
+
+  if 'slice' in args and not '--nowait' in args[i+1:]:
+    run(connect, apikey, args=['wait', ret['jobid']])
+    if '--get' in args[i+1:]:
+      run(connect, apikey, args=['get', args[i]+'.gcode'])
+
 _sock = None
 def connect_tpl(HOST, PORT):
   # Create a socket (SOCK_STREAM means a TCP socket)
@@ -202,6 +221,7 @@ if __name__=="__main__":
     print 'cannot parse ~/.deslicer'
     exit(1)
   hostname = config.get('client', 'server').strip()
+  apikey = config.get('client', 'apikey').strip()
   if hostname.startswith('['):
     hi = hostname.index(']')
     hc = hi+hostname[hi:].index(':')
@@ -220,6 +240,6 @@ if __name__=="__main__":
   connect = partial(connect_tpl, HOST, PORT)
 
   try:
-    run(connect)
+    run(connect, apikey)
   finally:
     connect_close()
