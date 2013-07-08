@@ -8,6 +8,7 @@ import os
 import threading
 import subprocess
 import sqlite3
+import time
 import logging
 logging.basicConfig(filename='/var/log/deslicer.log',level=logging.DEBUG)
 
@@ -110,48 +111,94 @@ def ping(j, con):
   return {'r': 'pong', 'm': 'pong', 'c':int(j['c'])+1}
 
 
-def slicethread(fname, oname, wname, cfg):
-  con = sqlite3.connect('db.sqlite')
-  con.row_factory = sqlite3.Row
-
-  proc = subprocess.Popen(["slic3r",
-    "--load", "config.ini" if cfg is None else cfg,
-    fname, "-o", wname+'.gcode'])
-  con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
-    ('slice {} -c {}'.format(os.path.basename(fname),
-                             os.path.basename(cfg)), proc.pid, 'start',
-      0 if proc.returncode == None else 1 ))
-  con.commit()
-  retcode = proc.wait()
-  con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
-    ('slice {} -c {}'.format(os.path.basename(fname),
-                             os.path.basename(cfg)), proc.pid, 'stop',
-      proc.returncode))
-  con.commit()
+def slicethread(fname, oname, wname, cfg, jobid):
   try:
-    os.unlink(oname+'.gcode')
-  except OSError as e:
-    pass
-  finally:
+    con = sqlite3.connect('db.sqlite')
+    con.row_factory = sqlite3.Row
+
+    proc = subprocess.Popen(["slic3r",
+      "--load", "config.ini" if cfg is None else cfg,
+      fname, "-o", wname+'.gcode'])
+    con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
+      ('slice {} -c {}'.format(os.path.basename(fname),
+                               os.path.basename(cfg)), proc.pid, 'start',
+        0 if proc.returncode == None else 1 ))
+    con.commit()
+    retcode = proc.wait()
+    con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
+      ('slice {} -c {}'.format(os.path.basename(fname),
+                               os.path.basename(cfg)), proc.pid, 'stop',
+        proc.returncode))
+    con.commit()
     try:
-      os.rename(wname+'.gcode', oname+'.gcode')
-    except Exception:
-      logging.info( wname+'.gcode')
-      logging.info( oname+'.gcode')
+      os.unlink(oname+'.gcode')
+    except OSError as e:
       pass
+    finally:
+      try:
+        os.rename(wname+'.gcode', oname+'.gcode')
+      except Exception:
+        logging.info( wname+'.gcode')
+        logging.info( oname+'.gcode')
+        pass
+  finally:
+    _work_done(jobid)
+
+
+def _seq():
+  s = 0
+  while True:
+    yield s
+    s += 1
+
+from threading import Lock
+_task_lock = Lock()
+_task_list = dict()
+_task_seq = _seq()
+def _work_reg():
+  _task_lock.acquire()
+  jid = _task_seq.next()
+  _task_list[jid] = False
+  logging.info(str(_task_list))
+  _task_lock.release()
+  return jid
+
+def _work_done(idx):
+  _task_lock.acquire()
+  if _task_list.has_key(idx):
+    _task_list[idx] = True
+  logging.info(str(_task_list))
+  _task_lock.release()
+
+def is_done(idx):
+  _task_lock.acquire()
+
+  if _task_list.has_key(idx):
+    st = _task_list[idx]
+  else:
+    st = -1
+  logging.info(str(_task_list))
+  _task_lock.release()
+
+  return st
+
 
 def sliceit(j, con):
   idx = os.path.basename(j['id'])
   oname = os.path.join(os.path.abspath('gcode'), idx)
   wname = os.path.join(os.path.abspath('work'), idx)
   fname = os.path.join(os.path.abspath('stl'), idx)
-  logging.info(str(fname, oname, wname))
+  logging.info("{} {} {}".format(fname, oname, wname))
   cfg = None
   if j.has_key('cfg'):
     cfg = 'cfg/'+os.path.basename(j['cfg'])
-  th = threading.Thread(target=slicethread, args=(fname, oname, wname, cfg))
+
+  jobid = _work_reg()
+  th = threading.Thread(target=slicethread, args=(fname, oname, wname, cfg, jobid))
   th.start()
-  return {'m': 'slicing started', 'r': 'ok'}
+
+  return {'m': 'slicing started. job id: {}'.format(jobid),
+      'r': 'ok', 'jobid': jobid}
 
 def getstats(j, con):
   r = tuple(con.execute(u'select count(cmd) as cnt, sum(recvd) as recvd, sum(sent) as sent from stats;'))
@@ -159,7 +206,7 @@ def getstats(j, con):
       'rcv': r[0][1], 'snt': r[0][2]}
 
 def getjournal(j, con):
-  r = con.execute(u'select * from journal order by timestamp desc;')
+  r = con.execute(u'select * from journal order by timestamp desc limit 6;')
   return {'r': 'ok', 'm': 'ok', 'data': list(map(dict,r))}
 
 def wipefile(j, con):
@@ -179,7 +226,16 @@ def wipefile(j, con):
   else:
     return {'r': 'fail', 'm': 'invalid type: {}'.format(typ)}
 
-def handle(data, con):
+def waitfor(j, con):
+  jobid = int(j['jobid'])
+  r = False
+  while not r:
+    r = is_done(jobid)
+    time.sleep(1)
+  return {'r': 'ok', 'm': 'ended' if r is True else 'job doesnt exist'}
+
+
+def handle(data, con, apikey=None):
   d = json.loads(data)
 
   handlers = {'import': importit, 'ping': ping,
@@ -187,7 +243,7 @@ def handle(data, con):
       'listdone': listdone, 'getdone': getdone,
       'importconfig': importconfig, 'listconfig': listconfigs,
       'listprogress': listprogress, 'getstats': getstats,
-      'journal': getjournal, 'del': wipefile}
+      'journal': getjournal, 'del': wipefile, 'wait': waitfor}
 
   hndlr = noop
   cmd = 'noop'
@@ -197,6 +253,13 @@ def handle(data, con):
       hndlr = handlers[cmd]
 
   logging.info('cmd: ' + cmd)
+
+  if not apikey is None:
+    if not (d.has_key('key') and d['key'] == apikey):
+      logging.info('authentication failed for "{}" key!'.format(
+        '' if not d.has_key('key') else d['key']))
+      return json.dumps({'r': 'fail',
+        'm': 'authentication failed. incorrect apikey'})
 
   try:
     r = hndlr(d, con)
