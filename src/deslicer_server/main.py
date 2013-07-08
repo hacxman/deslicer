@@ -7,6 +7,9 @@ import sqlite3
 
 import threading
 
+import logging
+logging.basicConfig(filename='/var/log/deslicer.log',level=logging.DEBUG)
+
 config = {}
 
 def recvupto(sock, c='\n'):
@@ -44,13 +47,13 @@ def handle(sock):
   #fd = sock.fileno()
   while True:
     cnt = recvupto(sock) #fd.readline()
-    print cnt
+    logging.info( cnt)
     if cnt == '':
         break
     cnt = cnt.strip()
-    print cnt
+    logging.info( cnt)
 
-    print('request size:', cnt)
+    logging.info(('request size:', cnt))
     data = ''
     datalen = 0
     while datalen != int(cnt):
@@ -59,14 +62,31 @@ def handle(sock):
         break
       data += d
       datalen += len(d)
-    #print(data)
+    #logging.info((data))
 
-    response = request.handle(data, con)
+    response = request.handle(data, con, apikey=config['apikey'])
 
     sock.sendall(str(len(response))+'\n'+response)
 
 import ssl
 import traceback
+def _ssl_handle(newsocket, fromaddr):
+  try:
+    connstream = ssl.wrap_socket(newsocket,
+      server_side=True,
+      certfile="/etc/pki/tls/deslicer/server.crt",
+      keyfile="/etc/pki/tls/deslicer/server.key",
+      ssl_version=ssl.PROTOCOL_TLSv1)
+    handle(connstream)
+  except Exception as e:
+    logging.error( traceback.format_exc())
+  finally:
+    try:
+      connstream.shutdown(socket.SHUT_RDWR)
+    except socket.error as e:
+      logging.error( traceback.format_exc())
+    connstream.close()
+
 def do_main_program():
   bindsocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
   bindsocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -74,33 +94,24 @@ def do_main_program():
   bindsocket.listen(5)
   while True:
     newsocket, fromaddr = bindsocket.accept()
-    try:
-      connstream = ssl.wrap_socket(newsocket,
-        server_side=True,
-        certfile="/etc/pki/tls/deslicer/server.crt",
-        keyfile="/etc/pki/tls/deslicer/server.key",
-        ssl_version=ssl.PROTOCOL_TLSv1)
-      handle(connstream)
-    except Exception as e:
-      print traceback.format_exc()
-    finally:
-      try:
-        connstream.shutdown(socket.SHUT_RDWR)
-      except socket.error as e:
-        print traceback.format_exc()
-      connstream.close()
+    th = threading.Thread(target=_ssl_handle, args=(newsocket, fromaddr))
+    th.start()
 
 def initial_program_setup():
   import ConfigParser
+  _config = ConfigParser.ConfigParser()
+  if len(_config.read(os.path.expanduser('/etc/deslicer.conf'))) == 0:
+    logging.info( 'cannot parse /etc/deslicer.conf')
+    exit(1)
+  config['apikey'] = _config.get('server', 'apikey').strip()
+  logging.info('apikey = '+config['apikey'])
 
-  #config = ConfigParser.ConfigParser()
-  #config.read('penis.cfg')
-  print ('SETUUUUUUUUUP!!!!!')
+  logging.info( 'SETUUUUUUUUUP!!!!!')
 
 def program_cleanup():
-  print ('CLEANUUUUUUUUP!!!')
+  logging.info( 'CLEANUUUUUUUUP!!!')
 
 def reload_program_config():
-  print ('CONFIIIIIIIIIIG!!!!111')
+  logging.info( 'CONFIIIIIIIIIIG!!!!111')
 
 
