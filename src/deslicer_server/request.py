@@ -112,12 +112,15 @@ def ping(j, con):
 
 
 def slicethread(fname, oname, wname, cfg, jobid):
+  retcode = "fail"
   try:
     con = sqlite3.connect('db.sqlite')
     con.row_factory = sqlite3.Row
 
+    cfg = "config.ini" if cfg is None else cfg
+
     proc = subprocess.Popen(["slic3r",
-      "--load", "config.ini" if cfg is None else cfg,
+      "--load", cfg,
       fname, "-o", wname+'.gcode'])
     con.execute('insert into journal(cmd, pid, action, status, timestamp) values(?,?,?,?,DateTime(\'now\'))',
       ('slice {} -c {}'.format(os.path.basename(fname),
@@ -142,7 +145,7 @@ def slicethread(fname, oname, wname, cfg, jobid):
         logging.info( oname+'.gcode')
         pass
   finally:
-    _work_done(jobid)
+    _work_done(jobid, val=retcode)
 
 
 def _seq():
@@ -163,10 +166,10 @@ def _work_reg():
   _task_lock.release()
   return jid
 
-def _work_done(idx):
+def _work_done(idx, val=None):
   _task_lock.acquire()
   if _task_list.has_key(idx):
-    _task_list[idx] = True
+    _task_list[idx] = True if val is None else val
   logging.info(str(_task_list))
   _task_lock.release()
 
@@ -176,7 +179,7 @@ def is_done(idx):
   if _task_list.has_key(idx):
     st = _task_list[idx]
   else:
-    st = -1
+    st = None
   logging.info(str(_task_list))
   _task_lock.release()
 
@@ -229,10 +232,11 @@ def wipefile(j, con):
 def waitfor(j, con):
   jobid = int(j['jobid'])
   r = False
-  while not r:
+  while r is False:
     r = is_done(jobid)
     time.sleep(1)
-  return {'r': 'ok', 'm': 'ended' if r is True else 'job doesnt exist'}
+  return {'r': 'ok', 'm': 'ended with status {}'.format(r)
+      if not r is None else 'job doesnt exist', 'status': r}
 
 
 def handle(data, con, apikey=None):
