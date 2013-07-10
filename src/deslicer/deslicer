@@ -64,8 +64,9 @@ def talkto(data, sock, apikey=None):
 def show_help():
   print """usage: deslicer_client.py COMMAND [PARAM]
 COMMANDS are one of:
-  import STLFILE [--slice]  - import an STL file, and optionally call
-                              slice --get on uploaded STL using
+  import STLFILE [--slice] [-c CFG]
+                            - import an STL file, and optionally call
+                              slice [-c CFG] --get on uploaded STL using
                               default config.ini
   importconfig CFGFILE      - import slic3r ini file
   ping                      - ping server
@@ -198,8 +199,14 @@ def run(connect, apikey, args=sys.argv):
     if '--get' in args[i+1:] and str(_r['status']).strip() == '0':
       run(connect, apikey, args=['get', args[i]+'.gcode'])
   if 'import' in args and '--slice' in args:
+    _cfg = None
+    if '-c' in args:
+      _cfg = args[args.index('-c')+1]
     if ret.has_key('id'):
-      run(connect, apikey, args=['slice', ret['id'][4:], '--get'])
+      if _cfg:
+        run(connect, apikey, args=['slice', ret['id'][4:], '-c', _cfg, '--get'])
+      else:
+        run(connect, apikey, args=['slice', ret['id'][4:], '--get'])
 
   return ret
 
