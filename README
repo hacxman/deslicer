@@ -1,0 +1,11 @@
+Remote slic3r service + client.
+
+Be sure to set the same apikey in /etc/deslicer.conf
+at server side and in $HOME/.deslicer.
+
+You need to set server address in $HOME/.deslicer.
+Server listens on AF_INET6. The format for entering
+IPv6 address with port is similar to one used in web browsers,
+i.e. server=[IP6ADDR]:PORT or without port server=IP6ADDR,
+where IP6ADDR could be valid numeric address or DNS name.
+
