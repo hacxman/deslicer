@@ -1,7 +1,17 @@
 #!/usr/bin/bash
-tar czhvf deslicer-0.0.1.tar.gz deslicer-0.0.1
-cp deslicer-0.0.1.tar.gz ~/rpmbuild/SOURCES/deslicer-0.0.1.tar.gz
+V=$(cat VERSION)
+if [ $# -eq 1 ] ; then
+  echo Changing version from $V to $1
+  sed -i "s/^Version:\ *\([A-Za-z0-9\.-]*\)\ *$/Version: $1/" src/deslicer.spec
+  rm deslicer-$V
+  V=$1
+  echo $1 > VERSION
+  ln -s src deslicer-$V
+fi
+tar czhvf deslicer-$V.tar.gz deslicer-$V
+cp deslicer-$V.tar.gz ~/rpmbuild/SOURCES/deslicer-$V.tar.gz
 pushd src
 rpmbuild -bs deslicer.spec
 popd
-mock -r fedora-18-x86_64 --rebuild ~/rpmbuild/SRPMS/deslicer-0.0.1-1.fc18.src.rpm
+mock -r fedora-19-x86_64 --rebuild ~/rpmbuild/SRPMS/deslicer-$V-1.fc19.src.rpm
+cp /var/lib/mock/fedora-19-x86_64/result/*.rpm rpm/
