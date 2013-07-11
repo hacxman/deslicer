@@ -1,6 +1,6 @@
 Summary: Deslicer client
 Name: deslicer
-Version: 0.0.1
+Version: 1.0.0rc.2
 Release: 1%{?dist}
 Source0: http://konia.rit/%{version}/tarball/%{name}-%{version}.tar.gz
 License: ASL 2.0
