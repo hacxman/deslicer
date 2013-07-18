@@ -271,6 +271,6 @@ def handle(data, con, apikey=None):
   except Exception as e:
     logging.error(str(e))
     result = json.dumps({u'm':unicode(e), u'r':u'fail'})
-  logaccess(len(d), len(result), unicode(cmd), con)
+  logaccess(len(data), len(result), unicode(cmd), con)
 
   return result
