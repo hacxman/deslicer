@@ -216,6 +216,9 @@ def run(connect, apikey, args=sys.argv):
     if ret.has_key('id'):
       run(connect, apikey, args=['slice', ret['id'][4:]] + _cfg + _ofl + ['--get'])
 
+  if 'import' in args or 'importconfig' in args:
+      print ret['id'][4:]
+
   return ret
 
 _sock = None
