@@ -64,10 +64,10 @@ def talkto(data, sock, apikey=None):
 def show_help():
   print """usage: deslicer_client.py COMMAND [PARAM]
 COMMANDS are one of:
-  import STLFILE [--slice] [-c CFG]
+  import STLFILE [--slice [-c CFG] [-O FILE]]
                             - import an STL file, and optionally call
-                              slice [-c CFG] --get on uploaded STL using
-                              default config.ini
+                              slice [-c CFG] [-O FILE] --get on uploaded STL using
+                              default config.ini (it will download resulting GCode)
   importconfig CFGFILE      - import slic3r ini file
   ping                      - ping server
   list                      - same as listi listc listd sequentially
@@ -75,12 +75,12 @@ COMMANDS are one of:
   listc                     - list imported configs
   listd                     - list sliced files
   listp                     - list files being worked on
-  slice UPLOADEDID [-c CFG] [--nowait | --get]
+  slice UPLOADEDID [-c CFG] [--nowait | --get [-O FILE]]
                             - slice an uploaded STL [and use CFG config file],
                               and optionally dont wait for worker to complete
                               or get results and save as UPLOADEDID.gcode.
                               (--nowait and --get are mutually exclusive)
-  get SLICEDID              - downloaded sliced GCode
+  get SLICEDID [-O FILE]    - download sliced GCode [and save as FILE]
   stats                     - show server statistics
   journal                   - show log of slicings
   del TYPE ID               - delete file ID of stl | cfg | done TYPE
@@ -178,7 +178,12 @@ def run(connect, apikey, args=sys.argv):
 
   if 'get' in args and ret.has_key(u'data'):
     fdata = base64.decodestring(ret['data'])
-    with open(args[i], 'w+') as fin:
+    g_i = args.index('get')
+    if '-O' in args[g_i:]:
+      fnm = args[args[g_i:].index('-O')+1]
+    else:
+      fnm = args[i]
+    with open(fnm, 'w+') as fin:
       fin.write(fdata)
   if 'stats' in args:
     print 'Total command count:', ret['cnt']
@@ -197,16 +202,19 @@ def run(connect, apikey, args=sys.argv):
   if 'slice' in args and not '--nowait' in args[i+1:]:
     _r = run(connect, apikey, args=['wait', ret['jobid']])
     if '--get' in args[i+1:] and str(_r['status']).strip() == '0':
-      run(connect, apikey, args=['get', args[i]+'.gcode'])
+      _ofl = []
+      if '-O' in args:
+        _ofl = ['-O', args[args.index('-O')+1]]
+      run(connect, apikey, args=['get', args[i]+'.gcode']+_ofl)
   if 'import' in args and '--slice' in args:
-    _cfg = None
+    _cfg = []
+    _ofl = []
     if '-c' in args:
-      _cfg = args[args.index('-c')+1]
+      _cfg = ['-c', args[args.index('-c')+1]]
+    if '-O' in args:
+      _ofl = ['-O', args[args.index('-O')+1]]
     if ret.has_key('id'):
-      if _cfg:
-        run(connect, apikey, args=['slice', ret['id'][4:], '-c', _cfg, '--get'])
-      else:
-        run(connect, apikey, args=['slice', ret['id'][4:], '--get'])
+      run(connect, apikey, args=['slice', ret['id'][4:]] + _cfg + _ofl + ['--get'])
 
   return ret
 
